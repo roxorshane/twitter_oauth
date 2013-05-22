@@ -32,7 +32,7 @@ module TwitterOAuth
 
     def authorize(token, secret, options = {})
       request_token = OAuth::RequestToken.new(
-        consumer(:secure => true), token, secret
+        consumer, token, secret
       )
       @access_token = request_token.get_access_token(options)
       @token = @access_token.token
@@ -50,18 +50,18 @@ module TwitterOAuth
     end
 
     def request_token(options={})
-      consumer(:secure => true).get_request_token(options)
+      consumer.get_request_token(options)
     end
 
     def authentication_request_token(options={})
-      consumer(:secure => true).options[:authorize_path] = '/oauth/authenticate'
+      consumer.options[:authorize_path] = '/oauth/authenticate'
       request_token(options)
     end
 
     private
 
     def consumer(options={})
-      options[:secure] ||= false
+      options[:secure] ||= true
       protocol = options[:secure] ? 'https' : 'http'
       @consumer ||= OAuth::Consumer.new(
         @consumer_key,
