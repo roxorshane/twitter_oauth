@@ -41,7 +41,7 @@ module TwitterOAuth
     end
 
     def show(username)
-      get "/users/show/#{username}.json"
+      get("/users/show/#{username}.json")
     end
 
     # Returns the string "ok" in the requested format with a 200 OK HTTP status code.
@@ -106,6 +106,8 @@ module TwitterOAuth
       end
     end
 
+    private
+
     def check_for_errors resp
       if resp.is_a?(Hash) && resp["errors"]
         resp["errors"].each do |error|
@@ -116,7 +118,6 @@ module TwitterOAuth
         raise TwitterUnknownError.new(resp["errors"])
       end
     end
-
   end
 end
 
