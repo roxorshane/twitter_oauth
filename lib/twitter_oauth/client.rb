@@ -80,10 +80,6 @@ module TwitterOAuth
       @access_token ||= OAuth::AccessToken.new(consumer, @token, @secret)
     end
 
-    def bearer_token
-      @bearer_token ||= get_bearer_token
-    end
-
     def get(path, headers={})
       headers.merge!("User-Agent" => "twitter_oauth gem v#{TwitterOAuth::VERSION}")
       oauth_response = access_token.get("/#{@api_version}#{path}", headers)
