@@ -28,6 +28,7 @@ module TwitterOAuth
       @api_version = options[:api_version] || '1.1'
       @api_host = options[:api_host] || 'api.twitter.com'
       @search_host = options[:search_host] || 'search.twitter.com'
+      @application_only = !!options[:application_only]
     end
 
     def authorize(token, secret, options = {})
@@ -41,7 +42,12 @@ module TwitterOAuth
     end
 
     def show(username)
-      get("/users/show/#{username}.json")
+      path = "/users/show/#{username}.json"
+      if @application_only
+        app_auth_request :get, "/#{@api_version}#{path}"
+      else
+        get path
+      end
     end
 
     # Returns the string "ok" in the requested format with a 200 OK HTTP status code.
@@ -72,6 +78,10 @@ module TwitterOAuth
 
     def access_token
       @access_token ||= OAuth::AccessToken.new(consumer, @token, @secret)
+    end
+
+    def bearer_token
+      @bearer_token ||= get_bearer_token
     end
 
     def get(path, headers={})
@@ -106,8 +116,6 @@ module TwitterOAuth
       end
     end
 
-    private
-
     def check_for_errors resp
       if resp.is_a?(Hash) && resp["errors"]
         resp["errors"].each do |error|
@@ -117,6 +125,38 @@ module TwitterOAuth
         end
         raise TwitterUnknownError.new(resp["errors"])
       end
+    end
+
+    def get_bearer_token
+      response = app_auth_request :post, "/oauth2/token", { "grant_type" => "client_credentials" }
+      response["access_token"]
+    end
+
+    def app_auth_request(method, path, data={})
+      uri = URI.parse "https://#{@api_host}#{path}"
+      http = Net::HTTP.new uri.host, uri.port
+      http.use_ssl = true
+
+      case method.to_sym
+      when :get
+        headers = {
+          "User-Agent"    => "twitter_oauth gem v#{TwitterOAuth::VERSION}",
+          "Authorization" => "Bearer #{get_bearer_token}"
+        }
+
+        request = Net::HTTP::Get.new uri.request_uri, headers
+      when :post
+        headers = {
+          "User-Agent"    => "twitter_oauth gem v#{TwitterOAuth::VERSION}",
+          "Authorization" => "Basic #{Base64.encode64(@consumer_key + ":" + @consumer_secret).gsub("\n", "")}",
+          "Content-Type"  => "application/x-www-form-urlencoded;charset=UTF-8"
+        }
+
+        request = Net::HTTP::Post.new uri.request_uri, headers
+        request.set_form_data data
+      end
+
+      JSON.parse http.request(request).body
     end
   end
 end
